@@ -17,14 +17,17 @@ public class Order implements Discountable{
     private ShipmentMethod shipmentMethod;
     private PaymentMethod paymentMethod;
     private BigDecimal discount = BigDecimal.ZERO;
+    private final Customer customer;
 
-    public Order() {
+    public Order(Customer customer) {
+        this.customer = customer;
         this.products = new ArrayList<>();
         id = UUID.randomUUID();
         paid = false;
     }
 
-    public Order(Product product) {
+    public Order(Product product, Customer customer) {
+        this.customer = customer;
         this.products = new ArrayList<>();
         this.addProduct(product);
 
@@ -32,12 +35,14 @@ public class Order implements Discountable{
         paid = false;
     }
 
-    public Order(List<Product> products) {
+    public Order(List<Product> products,Customer customer) {
         if(products == null || products.isEmpty()){
             throw new IllegalArgumentException();
         }
         this.products = new ArrayList<>();
         this.products.addAll(products);
+
+        this.customer = customer;
 
         id = UUID.randomUUID();
         paid = false;
@@ -91,8 +96,8 @@ public class Order implements Discountable{
     }
 
     public void send() {
-        boolean sentSuccesful = getShipmentMethod().send(shipment, shipment.getSenderAddress(), shipment.getRecipientAddress());
-        shipment.setShipped(sentSuccesful);
+        boolean sentSuccessful = getShipmentMethod().send(shipment, shipment.getSenderAddress(), shipment.getRecipientAddress());
+        shipment.setShipped(sentSuccessful);
     }
 
     public void pay(MoneyTransfer moneyTransfer) {
@@ -119,4 +124,9 @@ public class Order implements Discountable{
     public BigDecimal getDiscount() {
         return discount;
     }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
 }

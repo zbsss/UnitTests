@@ -1,9 +1,7 @@
 package pl.edu.agh.internetshop;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.internal.matchers.Or;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,21 +12,21 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockingDetails;
 import static pl.edu.agh.internetshop.util.CustomAssertions.assertBigDecimalCompareValue;
 
 public class OrderTest {
+	private Customer CUSTOMER = mock(Customer.class);
 
 	private Order getOrderWithMockedProduct() {
 		Product product = mock(Product.class);
-		return new Order(Collections.singletonList(product));
+		return new Order(Collections.singletonList(product), CUSTOMER);
 	}
 
 	@Test
 	public void testGetProductThroughOrder() {
 		// given
 		Product expectedProduct = mock(Product.class);
-		Order order = new Order(Collections.singletonList(expectedProduct));
+		Order order = new Order(Collections.singletonList(expectedProduct), CUSTOMER);
 
 		// when
 		List<Product> actualProduct = order.getProducts();
@@ -67,7 +65,7 @@ public class OrderTest {
 		BigDecimal expectedProductPrice = BigDecimal.valueOf(1000);
 		Product product = mock(Product.class);
 		given(product.getPriceWithDiscount()).willReturn(expectedProductPrice);
-		Order order = new Order(product);
+		Order order = new Order(product, CUSTOMER);
 
 		// when
 		BigDecimal actualProductPrice = order.getPrice();
@@ -80,7 +78,7 @@ public class OrderTest {
 		BigDecimal productPrice = BigDecimal.valueOf(productPriceValue);
 		Product product = mock(Product.class);
 		given(product.getPriceWithDiscount()).willReturn(productPrice);
-		return new Order(product);
+		return new Order(product, CUSTOMER);
 	}
 
 	@Test
@@ -219,7 +217,7 @@ public class OrderTest {
 		List<Product> products = null;
 
 		//when then
-		assertThrows(IllegalArgumentException.class, () -> new Order(products));
+		assertThrows(IllegalArgumentException.class, () -> new Order(products, CUSTOMER));
 	}
 
 	@Test
@@ -228,7 +226,7 @@ public class OrderTest {
 		List<Product> products = new ArrayList<>();
 
 		// when then
-		assertThrows(IllegalArgumentException.class, ()->new Order(products));
+		assertThrows(IllegalArgumentException.class, ()->new Order(products, CUSTOMER));
 	}
 
 	@Test
@@ -236,7 +234,7 @@ public class OrderTest {
 		//given
 		Product product1 = mock(Product.class);
 		Product product2 = mock(Product.class);
-		Order order = new Order(Arrays.asList(product1, product2));
+		Order order = new Order(Arrays.asList(product1, product2), CUSTOMER);
 
 		//when
 		List<Product> productList = order.getProducts();
@@ -247,25 +245,76 @@ public class OrderTest {
 		assertEquals(2, productList.size());
 	}
 
+
 	@Test
 	public void addNullProductToOrder(){
 		//given
-		Order order = new Order();
+		Order order = new Order(CUSTOMER);
 
 		//when
 		assertThrows(IllegalArgumentException.class, ()->order.addProduct(null));
 	}
 
-	/*Todo - wszystkie testy poniżej*/
+	//todo
 
-	// can discount be 100%
+	@Test
+	public void testMaxDiscount(){
+		// given
+		Order order = getOrderWithCertainProductPrice(1);
 
-	// what if discount is 0%
+		// when
+		order.setDiscount(BigDecimal.ONE);
 
-	// discount with no rounding
+		// then
+		assertBigDecimalCompareValue(BigDecimal.ZERO, order.getPriceWithDiscount());
+	}
 
-	//discount with round up
+	@Test
+	public void testMinDiscount(){
+		// given
+		Order order = getOrderWithCertainProductPrice(1);
 
-	//discount with round down
+		//when
+		order.setDiscount(BigDecimal.ZERO);
+
+		//then
+		assertBigDecimalCompareValue(order.getPriceWithTaxes(), order.getPriceWithDiscount());
+	}
+
+	@Test
+	public void discountWithNoRounding(){
+		// given
+		Order order = getOrderWithCertainProductPrice(2); // 2 PLN
+
+		// when
+		order.setDiscount(BigDecimal.valueOf(0.5));
+
+		// then
+		assertBigDecimalCompareValue(order.getPriceWithDiscount(), BigDecimal.valueOf(1.23)); // 1.23 PLN
+	}
+
+	@Test
+	public void discountWithRoundDown(){
+		// given
+		Order order = getOrderWithCertainProductPrice(0.01); // 0.01 PLN
+
+		// when
+		order.setDiscount(BigDecimal.valueOf(0.5));
+
+		// then
+		assertBigDecimalCompareValue(order.getPriceWithDiscount(), BigDecimal.valueOf(0.01)); // 0.01 PLN
+	}
+
+	@Test
+	public void discountWithRoundUp(){
+		// given
+		Order order = getOrderWithCertainProductPrice(0.03); // 0.03 PLN
+
+		// when
+		order.setDiscount(BigDecimal.valueOf(0.25));
+
+		// then
+		assertBigDecimalCompareValue(order.getPriceWithDiscount(), BigDecimal.valueOf(0.03)); // 0.03 PLN
+	}
 
 }
