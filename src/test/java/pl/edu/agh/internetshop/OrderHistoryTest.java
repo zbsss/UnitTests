@@ -8,67 +8,94 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 
 public class OrderHistoryTest {
+    private List<Product> PRODUCTS = new ArrayList<>(Arrays.asList(
+            new Product("iPhone", BigDecimal.valueOf(200)),
+            new Product("iPad", BigDecimal.valueOf(400)),
+            new Product("iPod", BigDecimal.valueOf(50)),
+            new Product("iMac", BigDecimal.valueOf(1000)),
+            new Product("MacBook", BigDecimal.valueOf(800))
+    ));
+    private List<Customer> CUSTOMERS = new ArrayList<>(Arrays.asList(
+            new Customer("Jan", "Kowalski"),
+            new Customer("Tomasz", "Tomasiewicz"),
+            new Customer("Adnrzej", "Andrzejewicz"),
+            new Customer("Wojciech", "Wojciechowski")
+    ));
 
-    private OrderHistory history;
-
-    private void setUpHistory(){
-        Product iPhone = new Product("iPhone", BigDecimal.valueOf(200));
-        Product iPad = new Product("iPad", BigDecimal.valueOf(400));
-        Product iPod= new Product("iPod", BigDecimal.valueOf(50));
-        Product iMac= new Product("iMac", BigDecimal.valueOf(1000));
-        Product macBook= new Product("MacBook", BigDecimal.valueOf(800));
-
-        Customer customer1 = new Customer("Jan", "Kowalski");
-        Customer customer2 = new Customer("Tomasz", "Tomasiewicz");
-        Customer customer3 = new Customer("Adnrzej", "Andrzejewicz");
-        Customer customer4 = new Customer("Wojciech", "Wojciechowski");
-
+    private OrderHistory getOrderHistory(){
         List<Order> orders = new ArrayList<>();
-        orders.add(new Order(Arrays.asList(iPhone, iPad), customer1));
-        orders.add(new Order(Arrays.asList(macBook), customer1));
-        orders.add(new Order(Arrays.asList(iPhone, iPad, iMac), customer2));
-        orders.add(new Order(Arrays.asList(iPod, iPhone), customer3));
-        orders.add(new Order(Arrays.asList(macBook, iMac), customer4));
-        orders.add(new Order(Arrays.asList(iPhone, iPad, iMac, macBook, iPod), customer3));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(0), PRODUCTS.get(1)), CUSTOMERS.get(0)));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(4)), CUSTOMERS.get(0)));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(0), PRODUCTS.get(1), PRODUCTS.get(3)), CUSTOMERS.get(1)));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(2), PRODUCTS.get(0)), CUSTOMERS.get(2)));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(4), PRODUCTS.get(3)), CUSTOMERS.get(3)));
+        orders.add(new Order(Arrays.asList(PRODUCTS.get(0), PRODUCTS.get(1), PRODUCTS.get(3), PRODUCTS.get(4), PRODUCTS.get(2)), CUSTOMERS.get(2)));
 
-        history = new OrderHistory(orders);
+        return new OrderHistory(orders);
     }
 
-    private void print(List<Order> orders){
-        System.out.println("--------------------------------");
-        for(Order order : orders){
-            StringBuilder builder = new StringBuilder();
-            builder.append(order.getCustomer().toString() + " ");
-            builder.append(order.getPriceWithDiscount() + " ");
-            for(Product product : order.getProducts()){
-                builder.append(product.getName()+ " ");
-            }
-            System.out.println(builder);
-        }
-        System.out.println("--------------------------------");
+
+    @Test
+    public void addOrderToHistory(){
+        // given
+        Order order = mock(Order.class);
+        OrderHistory history = new OrderHistory(Arrays.asList(order));
+
+        // when
+        List<Order> orderList = history.getOrderHistory();
+
+        // then
+        assertEquals(1, orderList.size());
+        assertSame(order, orderList.get(0));
     }
 
     @Test
-    public void test(){
-        setUpHistory();
+    public void searchByCustomerName(){
+        // given
+        OrderHistory history = getOrderHistory();
+        OrderFilter filter = new CustomerNameFilter("Tomasz", "Tomasiewicz");
 
-        print(history.getOrderHistory());
-        OrderFilter nameFilter = new CustomerNameFilter("Jan", "Kowalski");
-        print(history.searchOrders(nameFilter));
+        // when
+        List<Order> result = history.findOrders(filter);
 
-        OrderFilter productFilter = new ProductNameFilter("iPhone");
-        print(history.searchOrders(productFilter));
-
-        OrderFilter aggregateFilter = new AggregateFilter(Arrays.asList(nameFilter, productFilter));
-        print(history.searchOrders(aggregateFilter));
+        // then
+        assertEquals(1, result.size());
+        assertSame(CUSTOMERS.get(1), result.get(0).getCustomer());
     }
 
-    // Todo
-    // Proste dodwanie i sprawdzanie czy wszystko jest
-    // Dla każdego filtra po jednym teście + jeden dla zaagregowanego
+    @Test
+    public void searchByProductName(){
+        // given
+        OrderHistory history = getOrderHistory();
+        OrderFilter filter = new ProductNameFilter("iPod");
+
+        // when
+        List<Order> result = history.findOrders(filter);
+
+        // then
+        assertEquals(2, result.size());
+        assertTrue(result.contains(history.getOrderHistory().get(3)));
+        assertTrue(result.contains(history.getOrderHistory().get(5)));
+    }
+
+    @Test
+    public void aggregateSearch(){
+        // given
+        OrderHistory history = getOrderHistory();
+        OrderFilter filter1 = new ProductNameFilter("MacBook");
+        OrderFilter filter2 = new CustomerNameFilter("Jan", "Kowalski");
+        OrderFilter aggregateFilter = new AggregateFilter(Arrays.asList(filter1, filter2));
+
+        // when
+        List<Order> result = history.findOrders(aggregateFilter);
+
+        // then
+        assertEquals(1, result.size());
+        assertSame(history.getOrderHistory().get(1), result.get(0));
+    }
+
 }

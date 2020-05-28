@@ -11,7 +11,7 @@ public class OrderHistory {
         this.orders = orders;
     }
 
-    public List<Order> searchOrders(OrderFilter filter){
+    public List<Order> findOrders(OrderFilter filter){
         List<Order> filteredOrders  = new ArrayList<>();
         for (Order order : orders){
             if(filter.filter(order))
